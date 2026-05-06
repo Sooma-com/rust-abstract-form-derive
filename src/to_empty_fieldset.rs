@@ -17,6 +17,12 @@ pub fn impl_to_empty_fieldset(ast: &DeriveInput) -> TokenStream {
                 let field_stmts = fields
                     .named
                     .iter()
+                    .filter(|field| {
+                        !field.attrs.iter().any(|attr|
+                            attr.path().is_ident("abstract_form") &&
+                            matches!(&attr.meta, syn::Meta::List(list) if
+                                list.tokens.to_string().contains("skip")))
+                    })
                     .filter_map(|field| {
                         let field_ident = field.ident.as_ref()?;
                         let field_name = field_ident.to_string();
