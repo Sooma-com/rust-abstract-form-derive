@@ -8,8 +8,36 @@ pub fn impl_to_empty_fieldset(ast: &DeriveInput) -> TokenStream {
         syn::Data::Union(_) => {
             quote_spanned! { ident.span() => compile_error!("Unions are not supported for ToEmptyFieldSet") }.into()
         }
-        syn::Data::Enum(_) => {
-            quote_spanned! { ident.span() => compile_error!("Enums are not supported for ToEmptyFieldSet") }.into()
+        syn::Data::Enum(enum_data) => {
+            let has_non_unit = enum_data.variants.iter().any(|v| !v.fields.is_empty());
+            if has_non_unit {
+                return quote_spanned! { ident.span() =>
+                    compile_error!("Only enums with unit variants are supported for ToEmptyFieldSet")
+                }.into();
+            }
+            let enum_name = ident.to_string();
+            quote_spanned! { ident.span() =>
+                impl abstract_form::fieldset::to_empty_fieldset::ToEmptyFieldSet for #ident {
+                    fn to_empty_fieldset() -> abstract_form::FieldSet {
+                        let options: Vec<String> = <#ident as strum::IntoEnumIterator>::iter()
+                            .map(|v| v.to_string())
+                            .collect();
+                        let validation = abstract_form::validation::ClosedSingleChoice::new(options);
+                        let mut field = abstract_form::Field::Text(abstract_form::field::Text::new(
+                            "".to_string(),
+                            "".to_string(),
+                            "".to_string(),
+                        ));
+                        field.add_validation(std::sync::Arc::new(Box::new(validation)));
+                        let mut fieldset = abstract_form::FieldSet::new(
+                            #enum_name.to_string(),
+                            "".to_string(),
+                        );
+                        fieldset.controls.push(field);
+                        fieldset
+                    }
+                }
+            }.into()
         }
         syn::Data::Struct(struct_data) => match &struct_data.fields {
             syn::Fields::Named(fields) => {
