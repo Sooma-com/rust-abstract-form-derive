@@ -19,22 +19,21 @@ pub fn impl_to_field_set(ast: &DeriveInput) -> TokenStream {
             quote_spanned! { ident.span() =>
                 impl abstract_form::fieldset::to_field_set::ToFieldSet for #ident {
                     fn to_field_set(&self) -> abstract_form::FieldSet {
-                        let options: Vec<String> = <#ident as strum::IntoEnumIterator>::iter()
-                            .map(|v| v.to_string())
+                        let options: Vec<(String, String)> = <#ident as strum::IntoEnumIterator>::iter()
+                            .map(|v| (v.to_string(), v.to_string()))
                             .collect();
                         let validation = abstract_form::validation::ClosedSingleChoice::new(options);
-                        let mut field = abstract_form::Field::Text(abstract_form::field::Text::new(
-                            "".to_string(),
-                            "".to_string(),
-                            self.to_string(),
-                        ));
-                        field.add_validation(std::sync::Arc::new(Box::new(validation)));
-                        let mut fieldset = abstract_form::FieldSet::new(
-                            #enum_name.to_string(),
-                            "".to_string(),
-                        );
-                        fieldset.controls.push(field);
-                        fieldset
+                        let field = abstract_form::field::SingleValue::<String> {
+                            tag: "".to_string(),
+                            label: "".to_string(),
+                            value: self.to_string(),
+                            validations: vec![std::sync::Arc::new(Box::new(validation))],
+                        };
+                        abstract_form::FieldSet {
+                            tag: "".to_string(),
+                            label: "".to_string(),
+                            controls: vec![ std::sync::Arc::new(Box::new(field)) ],
+                        }
                     }
                 }
             }.into()
@@ -57,9 +56,11 @@ pub fn impl_to_field_set(ast: &DeriveInput) -> TokenStream {
                         Some(quote_spanned! { field_ident.span() => {
                             let mut inner = self.#field_ident.to_field_set();
                             let inner_tag = inner.tag.clone();
-                            for control in &mut inner.controls {
+                            for control in inner.field_iter_mut() {
+                                let control = std::sync::Arc::get_mut(control).unwrap();
                                 control.prepend_tag(&inner_tag);
                                 control.prepend_tag(#field_name);
+                                control.set_label(#field_name);
                             }
                             fieldset.merge(&inner);
                         }})
@@ -69,7 +70,6 @@ pub fn impl_to_field_set(ast: &DeriveInput) -> TokenStream {
                 quote_spanned! { ident.span() =>
                     impl abstract_form::fieldset::to_field_set::ToFieldSet for #ident {
                         fn to_field_set(&self) -> abstract_form::FieldSet {
-                            use abstract_form::fieldset::to_field_set::ToFieldSet as _;
                             let mut fieldset = abstract_form::FieldSet::new(
                                 #struct_name.to_string(),
                                 "".to_string(),
