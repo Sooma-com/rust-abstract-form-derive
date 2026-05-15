@@ -15,7 +15,6 @@ pub fn impl_to_field_set(ast: &DeriveInput) -> TokenStream {
                     compile_error!("Only enums with unit variants are supported for ToFieldSet")
                 }.into();
             }
-            let enum_name = ident.to_string();
             quote_spanned! { ident.span() =>
                 impl abstract_form::fieldset::to_field_set::ToFieldSet for #ident {
                     fn to_field_set(&self) -> abstract_form::FieldSet {
