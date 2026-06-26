@@ -54,10 +54,8 @@ pub fn impl_to_field_set(ast: &DeriveInput) -> TokenStream {
                         let field_name = field_ident.to_string();
                         Some(quote_spanned! { field_ident.span() => {
                             let mut inner = self.#field_ident.to_field_set();
-                            let inner_tag = inner.tag.clone();
                             for control in inner.field_iter_mut() {
                                 let control = std::sync::Arc::get_mut(control).unwrap();
-                                control.prepend_tag(&inner_tag);
                                 control.prepend_tag(#field_name);
                                 control.set_label(#field_name);
                             }

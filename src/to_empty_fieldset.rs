@@ -55,10 +55,8 @@ pub fn impl_to_empty_fieldset(ast: &DeriveInput) -> TokenStream {
                         let field_ty = &field.ty;
                         Some(quote_spanned! { field_ident.span() => {
                             let mut inner = <#field_ty as abstract_form::fieldset::to_empty_fieldset::ToEmptyFieldSet>::to_empty_fieldset();
-                            let inner_tag = inner.tag.clone();
                             for control in inner.field_iter_mut() {
                                 let control = std::sync::Arc::get_mut(control).unwrap();
-                                control.prepend_tag(&inner_tag);
                                 control.prepend_tag(#field_name);
                                 control.set_label(#field_name);
                             }
